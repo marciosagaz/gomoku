@@ -28,17 +28,19 @@ function Buffer:insertByRule(value, rule)
 		return self:insert(value,(iMid+iState))
 	end
 
-function Buffer:remove()
-	return table.remove(self.list,1)
+function Buffer:remove(position)
+	position = position or #self.list
+	return table.remove(self.list,position)
 end
 
 function Buffer:isEmpty()
 	return #self.list == 0
 end
 
--- function Buffer:getItem()
--- 	return self.list[1]
--- end
+function Buffer:getItem(position)
+	position = position or #self.list
+	return self.list[position]
+end
 
 -- function Buffer:sort(regra)
 -- 	table.sort(self.list,regra)

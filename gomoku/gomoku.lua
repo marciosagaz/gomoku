@@ -6,8 +6,8 @@
 
 local Util = require "util"
 local Config = require "configuration"
-local Buffer = require "buffer_puzzle"
-local View = require "puzzle_view"
+local Buffer = require "gomoku_buffer"
+local View = require "gomoku_view"
 local engine = require "engine"
 local math = math;
 local State = {}
@@ -102,7 +102,8 @@ function State:isFinal()
 end
 
 function State:next()
-		self.node = self.frontier:remove()
+		self.node = self.frontier:remove(1)
+		self:register()
 end
 
 function State:expandFrontier()
