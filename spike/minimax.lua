@@ -168,7 +168,7 @@ local count = 0
 end
 
 local function utilidade(node, max)
-  local map = getMap2()
+  local map = getMap()
   for index, content in ipairs(node) do
     --if (index > 4) then return false end
     local point = (content == 0 and 0) or (content == 1 and 1) or -1
@@ -179,22 +179,32 @@ local function utilidade(node, max)
         dValue = dValue + piece
       end
       if max then
-        if (dValue == 3) then
+        if (dValue == 3) or (dValue == -2) then
           -- print(table.concat(node), true)
-          return countZeros(node)
+          local value = ((dValue == 3) and 3) or 1
+          return getPeso(value,true)
+        -- elseif (dValue == -3) then
+        --   return getPeso(countZeros(node),true)
         end
       else
         if (dValue == -3) then
-          -- print(table.concat(node), false)
-          return countZeros(node)
+          -- print(table.concat(node), true)
+          return getPeso(3,false)
         end
       end
+    --   if (dValue == 3) then
+    --       -- print(table.concat(node), true)
+    --       return getPeso(countZeros(node),true)
+    --     elseif (dValue == -3) then
+    --       return getPeso(countZeros(node),false)
+    --     end
     end
   end
   return false
 end
 
 local function isFinal(node)
+  print(table.concat(node))
   for _, content in ipairs(node) do
     if content == 0 then return false end
   end
@@ -212,7 +222,7 @@ local function minimax(node, depth, alfa, beta, maximizingPlayer)
     return getHeuritica(node,maximizingPlayer)
   elseif hasVictory(node, maximizingPlayer) then
     --print(utilidade(node,maximizingPlayer))
-    return getPeso(utilidade(node,maximizingPlayer),maximizingPlayer)
+    return utilidade(node,maximizingPlayer)
   end
 
   if maximizingPlayer then
@@ -241,10 +251,10 @@ local function minimax(node, depth, alfa, beta, maximizingPlayer)
 end
 
 
-local node = {2,0,0,
-              2,1,0,
-              0,0,1}
-local depth = 4
+local node = {0,2,1,
+              2,1,1,
+              2,0,0}
+local depth = 2
 local alfa = -1000000000
 local beta = 1000000000
 local maximizingPlayer = true
