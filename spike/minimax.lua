@@ -1,53 +1,67 @@
+local Util = require "common.util"
 
-local function evaluateLine(value1, value2, value3)
-      local score = 0;
+-- local function evaluateLine(value1, value2, value3)
+--       local score = 0;
 
-      -- First cell
-      if (value1 == 1) then
-         score = 1;
-      elseif (value1 == -1) then
-         score = -1;
-      end
+--       -- First cell
+--       if (value1 == 1) then
+--          score = 1;
+--       elseif (value1 == -1) then
+--          score = -1;
+--       end
 
-      -- Second cell
-      if (value2 == 1) then
-         if (score == 1) then -- cell1 is mySeed
-            score = 10;
-         elseif (score == -1) then -- cell1 is oppSeed
-            return 0;
-         else -- cell1 is empty
-            score = 1;
-         end
-      elseif (value2 == -1) then
-         if (score == -1) then -- cell1 is oppSeed
-            score = -10;
-         elseif (score == 1) then -- cell1 is mySeed
-            return 0;
-         else -- cell1 is empty
-            score = -1;
-         end
-      end
+--       -- Second cell
+--       if (value2 == 1) then
+--          if (score == 1) then -- cell1 is mySeed
+--             score = 10;
+--          elseif (score == -1) then -- cell1 is oppSeed
+--             return 0;
+--          else -- cell1 is empty
+--             score = 1;
+--          end
+--       elseif (value2 == -1) then
+--          if (score == -1) then -- cell1 is oppSeed
+--             score = -10;
+--          elseif (score == 1) then -- cell1 is mySeed
+--             return 0;
+--          else -- cell1 is empty
+--             score = -1;
+--          end
+--       end
 
-      -- Third cell
-      if (value3 == 1) then
-         if (score > 0) then -- cell1 and/or cell2 is mySeed
-            score = score * 10;
-         elseif (score < 0) then -- cell1 and/or cell2 is oppSeed
-            return 0;
-         else -- cell1 and cell2 are empty
-            score = 1;
-         end
-      elseif (value3 == -1) then
-         if (score < 0) then -- cell1 and/or cell2 is oppSeed
-            score = score * 10;
-         elseif (score > 1) then -- cell1 and/or cell2 is mySeed
-            return 0;
-         else -- cell1 and cell2 are empty
-            score = -1;
-         end
-      end
-      return score;
-   end
+--       -- Third cell
+--       if (value3 == 1) then
+--          if (score > 0) then -- cell1 and/or cell2 is mySeed
+--             score = score * 10;
+--          elseif (score < 0) then -- cell1 and/or cell2 is oppSeed
+--             return 0;
+--          else -- cell1 and cell2 are empty
+--             score = 1;
+--          end
+--       elseif (value3 == -1) then
+--          if (score < 0) then -- cell1 and/or cell2 is oppSeed
+--             score = score * 10;
+--          elseif (score > 1) then -- cell1 and/or cell2 is mySeed
+--             return 0;
+--          else -- cell1 and cell2 are empty
+--             score = -1;
+--          end
+--       end
+--       return score;
+--    end
+
+-- local function getHeuritica2(node)
+--   local score = 0;
+--   score = score + evaluateLine(node[1],node[2],node[3])
+--   score = score + evaluateLine(node[4],node[5],node[6])
+--   score = score + evaluateLine(node[7],node[8],node[9])
+--   score = score + evaluateLine(node[1],node[4],node[7])
+--   score = score + evaluateLine(node[2],node[5],node[8])
+--   score = score + evaluateLine(node[3],node[6],node[9])
+--   score = score + evaluateLine(node[1],node[5],node[9])
+--   score = score + evaluateLine(node[2],node[5],node[7])
+--   return score;
+-- end
 
 local function obterFilhos(node, piece)
   local unpack = table.unpack or unpack
@@ -75,33 +89,6 @@ local function getMap()
     {{2,5},{7,9}},
     {{1,5},{3,6},{7,8}},
   }
-end
-
-local function getMap2()
-  return {
-    {{2,3},{4,7},{5,9}},
-    {{5,8}},
-    {{6,9},{5,7}},
-    {{5,6}},
-    {},
-    {},
-    {{8,9}},
-    {},
-    {},
-  }
-end
-
-local function getHeuritica2(node)
-  local score = 0;
-  score = score + evaluateLine(node[1],node[2],node[3])
-  score = score + evaluateLine(node[4],node[5],node[6])
-  score = score + evaluateLine(node[7],node[8],node[9])
-  score = score + evaluateLine(node[1],node[4],node[7])
-  score = score + evaluateLine(node[2],node[5],node[8])
-  score = score + evaluateLine(node[3],node[6],node[9])
-  score = score + evaluateLine(node[1],node[5],node[9])
-  score = score + evaluateLine(node[2],node[5],node[7])
-  return score;
 end
 
 local function avalia(value, max)
@@ -146,14 +133,10 @@ local function getHeuritica(node,max)
           dValue = dValue + piece
         end
       end
-      -- print("dValue", dValue)
       pointValue = pointValue + getPeso(dValue,max)
     end
-    -- print(index, pointValue)
     totalValue = totalValue + pointValue
   end
-  --print(totalValue)
-  -- print('total', totalValue)
   return totalValue
 end
 
@@ -169,8 +152,9 @@ end
 
 local function utilidade(node, max)
   local map = getMap()
+  local flag = false
+  local lvalue = 0
   for index, content in ipairs(node) do
-    --if (index > 4) then return false end
     local point = (content == 0 and 0) or (content == 1 and 1) or -1
     for _, direction in ipairs(map[index]) do
       local dValue = point
@@ -178,33 +162,19 @@ local function utilidade(node, max)
         local piece = ((node[c] == 0) and 0) or ((node[c] == 1) and 1) or -1
         dValue = dValue + piece
       end
-      if max then
-        if (dValue == 3) or (dValue == -2) then
-          -- print(table.concat(node), true)
-          local value = ((dValue == 3) and 3) or 1
-          return getPeso(value,true)
-        -- elseif (dValue == -3) then
-        --   return getPeso(countZeros(node),true)
-        end
-      else
-        if (dValue == -3) then
-          -- print(table.concat(node), true)
-          return getPeso(3,false)
-        end
+      if (dValue == 3) then
+          lvalue = 3
+          flag = true
+      elseif (dValue == -3) then
+          lvalue = 3
+          flag = false
       end
-    --   if (dValue == 3) then
-    --       -- print(table.concat(node), true)
-    --       return getPeso(countZeros(node),true)
-    --     elseif (dValue == -3) then
-    --       return getPeso(countZeros(node),false)
-    --     end
     end
   end
-  return false
+  return ((lvalue ~= 0) and getPeso(lvalue+countZeros(node),flag)) or false
 end
 
 local function isFinal(node)
-  print(table.concat(node))
   for _, content in ipairs(node) do
     if content == 0 then return false end
   end
@@ -216,13 +186,10 @@ local function hasVictory(node,max)
 end
 
 local function minimax(node, depth, alfa, beta, maximizingPlayer)
-  -- print('alfa, beta',alfa, beta,maximizingPlayer)
-  if depth == 0 or isFinal(node, maximizingPlayer) then
-    -- print(table.concat(node))
-    return getHeuritica(node,maximizingPlayer)
-  elseif hasVictory(node, maximizingPlayer) then
-    --print(utilidade(node,maximizingPlayer))
+  if hasVictory(node, maximizingPlayer) then
     return utilidade(node,maximizingPlayer)
+  elseif depth == 0 or isFinal(node, maximizingPlayer) then
+    return getHeuritica(node,maximizingPlayer)
   end
 
   if maximizingPlayer then
@@ -251,10 +218,10 @@ local function minimax(node, depth, alfa, beta, maximizingPlayer)
 end
 
 
-local node = {0,2,1,
-              2,1,1,
-              2,0,0}
-local depth = 2
+local node = {0,0,0,
+              0,0,0,
+              0,0,0}
+local depth = 3
 local alfa = -1000000000
 local beta = 1000000000
 local maximizingPlayer = true
@@ -265,3 +232,9 @@ for _, child in ipairs(obterFilhos(node,1)) do
   print(minimax(child,depth,alfa,beta,maximizingPlayer))
   -- break
 end
+
+local windrose = {E=true,W=true,S=true,N=true, NE=true, NW=true, SE= true, SW=true}
+local coordinate = Util.getCartesianPlane(3)
+Util.printt(coordinate)
+local routes = Util.getRoutesOfCartesianPlane(3,coordinate, 2, windrose)
+Util.printt(routes)

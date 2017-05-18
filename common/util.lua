@@ -16,9 +16,9 @@ function Util.getCartesianPlane(size)
   return coordinates
 end
 
-function Util.getRoutesOfCartesianPlane(size, coordinate)
+function Util.getRoutesOfCartesianPlane(size, coordinate, steps,windrose)
   local routes, insert, sort = {}, table.insert, table.sort
-  local value, route
+  local ref1, ref2, route
   local function findCoordinate(x,y)
     for index, item in ipairs(coordinate) do
       if item.x == x and item.y == y then
@@ -27,16 +27,46 @@ function Util.getRoutesOfCartesianPlane(size, coordinate)
   end
   for index, item in ipairs(coordinate) do
     route = {}
-    value = item.x + 1
-    if value <= size then insert(route, findCoordinate(value,item.y)) end
-      value = item.x - 1
-    if value >= 1 then insert(route, findCoordinate(value,item.y)) end
-      value = item.y + 1
-    if value <= size then insert(route, findCoordinate(item.x, value)) end
-      value = item.y - 1
-    if value >= 1 then insert(route, findCoordinate(item.x, value)) end
-    sort(route)
-    routes[index] = route
+    for step=1, steps, 1 do
+      if (windrose.E) then
+        ref1 = item.x + step -- verifica o leste.
+        if ref1 <= size then insert(route, findCoordinate(ref1,item.y)) end
+      end
+      if (windrose.W) then
+        ref1 = item.x - step -- verifica o oeste.
+        if ref1 >= 1 then insert(route, findCoordinate(ref1,item.y)) end
+      end
+      if (windrose.N) then
+        ref2 = item.y + step -- verifica o norte
+        if ref2 <= size then insert(route, findCoordinate(item.x, ref2)) end
+      end
+      if (windrose.S) then
+        ref2 = item.y - step -- verifica o sul
+        if ref2 >= 1 then insert(route, findCoordinate(item.x, ref2)) end
+      end
+      if (windrose.NE) then
+        ref1 = item.x + step
+        ref2 = item.y + step -- verifica o nordeste
+        if ref1 <= size and ref2 <= size then insert(route, findCoordinate(ref1, ref2)) end
+      end
+      if (windrose.NW) then
+        ref1 = item.x - step
+        ref2 = item.y + step -- verifica o noroeste
+        if ref1 >= 1 and ref2 <= size then insert(route, findCoordinate(ref1, ref2)) end
+      end
+      if (windrose.SE) then
+        ref1 = item.x + step
+        ref2 = item.y - step -- verifica o sudeste
+        if ref1 <= size and ref2 >= 1 then insert(route, findCoordinate(ref1, ref2)) end
+      end
+      if (windrose.SW) then
+        ref1 = item.x - step
+        ref2 = item.y - step -- verifica o sudoeste
+        if ref1 >= 1 and ref2 >= 1 then insert(route, findCoordinate(ref1, ref2)) end
+      end
+      sort(route)
+      routes[index] = route
+    end
   end
   return routes
 end
@@ -54,6 +84,7 @@ function Util.printt(value,tab)
   if type(value) == 'table' then
     for index, content in pairs(value) do
       if type(content) == 'table' then
+        print(tab, index)
         Util.printt(content,tab .. "\t")
       else
         print(tab,index,content)
