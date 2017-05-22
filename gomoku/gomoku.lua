@@ -15,8 +15,46 @@ local State = {}
 --[ private functions ]
 -----------------------
 
+local function findLimit(self)
+  local count = 1
+  local xm, ym, xM, yM
+  for y=self.size, 1, -1 do
+    for x=1, self.size, 1 do
+      if self.initial[count] ~= 0 then
+        xm = math.min(self.coordinate[count].x,xm or self.coordinate[count].x)
+        ym = math.min(self.coordinate[count].y,ym or self.coordinate[count].y)
+        xM = math.max(self.coordinate[count].x,xM or self.coordinate[count].x)
+        yM = math.max(self.coordinate[count].y,yM or self.coordinate[count].y)
+      end
+      count = count + 1
+    end
+  end
+  if not xm then
+      xm, ym, xM, yM = 1, 1, self.size, self.size
+  end
+  -- print('xm,yM',xm..','..yM,'xM,yM',xM..','..yM)
+  -- print('xm,ym',xm..','..ym,'xM,ym',xM..','..ym)
+  xm = ((xm - 1 < 1) and 1) or (xm - 1)
+  ym = ((ym - 1 < 1) and 1) or (ym - 1)
+  xM = ((xM + 1 > self.size) and self.size) or (xM + 1)
+  yM = ((yM + 1 > self.size) and self.size) or (yM + 1)
+  local pointMin, pointMax
+  for index, content in ipairs(self.coordinate) do
+    if content.x == xm and content.y == yM then
+      pointMin = index
+    end
+    if content.x == xM and content.y == ym then
+      pointMax = index
+    end
+  end
+  -- print(pointMin, pointMax)
+  -- io.read()
+  return pointMin, pointMax
+
+end
+
 local function getPeso(value, extra, max)
-    if max then
+    -- if max then
       if value == 5 then
         return 400000000 + extra
       elseif value == 4 then
@@ -27,10 +65,10 @@ local function getPeso(value, extra, max)
         return 100 + extra
       elseif value == 1 then
         return 1 + extra
-      else
-        return extra
+      -- else
+      --   return extra
       end
-    else
+    -- else
       if value == -5 then
         return -400000000 - extra
       elseif value == -4 then
@@ -41,18 +79,22 @@ local function getPeso(value, extra, max)
         return -100 - extra
       elseif value == -1 then
         return -1 - extra
-      else
-        return 0 - extra
+      -- else
+      --   return 0 - extra
       end
-    end
+    -- end
+    return 0
 end
 
-local function countZeros(node, position)
+local function countZeros(node, position, self)
   local count = 0
+  local pmin, pmax = findLimit(self)
   for index, content in ipairs(node) do
-      if content == 0 then
-        count = count + 1
-        if position and position == count then return index end
+      if (pmin <= index) and (index <= pmax) then
+        if content == 0 then
+          count = count + 1
+          if position and position == count then return index end
+        end
       end
   end
   return count
@@ -69,6 +111,51 @@ local function getInput(coordinate)
 			return index
 		end
 	end
+end
+
+local function pcPlay(self)
+  local time = os.time()
+  local position, best, value = 0
+    if (self.depth ~= 0) then
+      for index, child in ipairs(self:obterFilhos(self.initial,1)) do
+        value = self.minimax(child,self.depth,self.alfa,self.beta,self.maximizingPlayer)
+        print('peso,zero position,iteration max, time',value,index,self.iterationMax,os.time()-time)
+        self.iterationMax = 0
+        if (best) then
+          if (best < value) then
+            best = value
+            position = index
+          end
+        else
+          best = value
+          position = index
+        end
+      end
+    else
+      position = 113
+    end
+		position = countZeros(self.initial,position,self)
+		print(position)
+		self.initial[position] = 1
+		self.view:draw(table.concat(self.initial,','))
+end
+
+local function humanPlay(self)
+	local position = getInput(self.coordinate)
+		print(position)
+		self.initial[position] = 2
+		self.view:draw(table.concat(self.initial,','))
+end
+
+local function whoBegin(self)
+  print('Digite quem começa: 1 humano ou apenas ENTER para pc')
+	local x =io.read();
+  if x == '1' then
+    self.view:draw(table.concat(self.initial,','))
+    humanPlay(self)
+    return 1
+  end
+  return 0
 end
 
 local function getMapValue()
@@ -99,7 +186,7 @@ end
 
 function State:new()
 	local instance = {}
-	local windrose = {E=true,W=false,S=true,N=false, NE=false, NW=false, SE= true, SW=true}
+	local windrose = {E=true,W=true,S=true,N=true, NE=true, NW=true, SE= true, SW=true}
 	local step = 4
 	self.__index = State
 	setmetatable(instance, self)
@@ -113,6 +200,7 @@ function State:new()
 	instance.beta = 100000000000
 	instance.maximizingPlayer = true
   instance.mapValue = getMapValue(Config.SIZE)
+  instance.iterationMax = 0
 	return instance
 end
 
@@ -126,41 +214,31 @@ function State:setup(minimax)
 end
 
 function State:play()
-  local count = 0
+  local msg = 'Humano ganhou!'
+  local count = whoBegin(self)
 	while not self:hasVictory(self.initial) do
-    if (count == 1 or count == 10 or count == 15 or count == 20) then
+    if (count == 1) then
       self.depth = self.depth + 1
       print('---------------------------------------------------',self.depth)
     end
     count = count + 1
-		local position, best, value = 0
-    if (self.depth ~= 0) then
-      for index, child in ipairs(self:obterFilhos(self.initial,1)) do
-        value = self.minimax(child,self.depth,self.alfa,self.beta,self.maximizingPlayer)
-        print(value,index)
-        best = math.max(value, best or value)
-        if (best == value) then position = index end
-      end
-    else
-      position = 113
+    pcPlay(self)
+    if (self:hasVictory(self.initial)) then
+      msg = 'Pc ganhou!'
+      break
     end
-		position = countZeros(self.initial,position,self)
-		print(position)
-		self.initial[position] = 1
-		self.view:draw(table.concat(self.initial,','))
-    if (self:hasVictory(self.initial)) then break end
-		position = getInput(self.coordinate)
-		print(position)
-		self.initial[position] = 2
-		self.view:draw(table.concat(self.initial,','))
+		humanPlay(self)
 	end
+  print(msg)
 end
 
 function State:getHeuritica(node,maxi)
   local map = self.routes
   local totalValue = 0
   local cutPoint
+  local pmin, pmax = findLimit(self)
   for index, content in ipairs(node) do
+    if (pmin <= index) and (index <= pmax) then
       local point = (content == 0 and 0) or (content == 1 and 1) or -1
       cutPoint = point
       local pointValue = 0
@@ -172,33 +250,39 @@ function State:getHeuritica(node,maxi)
           if cutPoint == 0 then
             cutPoint = piece
             dValue = dValue + piece
-          elseif cutPoint == 0 and piece == 0 then
-            dValue = 0;
-            break
           elseif ((cutPoint == 1 and piece == -1) or  (piece == 1 and cutPoint == -1)) then
             dValue = 0;
             break
           else
             dValue = dValue + piece
           end
+          if dValue == 0 then
+            break
+          end
         end
         pointValue = pointValue + getPeso(dValue,self.mapValue[index],maxi)
       end
       totalValue = totalValue + pointValue
+    end
   end
   return totalValue
 end
 
 function State:obterFilhos(node, piece)
+  local pmin, pmax = findLimit(self)
   local unpack = table.unpack or unpack
   local childen = {}
   for index, content in ipairs(node) do
-      if content == 0 then
-        local child = {unpack(node)}
-        child[index] = piece
-        childen[#childen+1]=child
+      if (pmin <= index) and (index <= pmax) then
+        -- print(index)
+        if content == 0 then
+          local child = {unpack(node)}
+          child[index] = piece
+          childen[#childen+1]=child
+        end
       end
   end
+  -- io.read()
   return childen
 end
 

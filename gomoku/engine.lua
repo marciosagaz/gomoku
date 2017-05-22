@@ -1,6 +1,7 @@
 local control
 
 local function minimax(node, depth, alfa, beta, maximizingPlayer)
+  control.iterationMax = control.iterationMax + 1
   if control:hasVictory(node, maximizingPlayer) then
     return control:utilidade(node,maximizingPlayer)
   elseif depth == 0 or control.isFinal(node, maximizingPlayer) then
