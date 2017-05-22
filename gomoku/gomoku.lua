@@ -6,7 +6,6 @@
 
 local Util = require "util"
 local Config = require "configuration"
-local Buffer = require "gomoku_buffer"
 local View = require "gomoku_view"
 local engine = require "engine"
 local math = math;
@@ -16,51 +15,83 @@ local State = {}
 --[ private functions ]
 -----------------------
 
-local behavior = {
-		__eq = function (state1,state2)
-			return state1.match[state2.id]
-		end
-}
-
-local function rule(first,second)
-  return first.cost == second.cost
-		and first.state.level < second.state.level
-		or first.cost < second.cost
+local function getPeso(value, extra, max)
+    if max then
+      if value == 5 then
+        return 400000000 + extra
+      elseif value == 4 then
+        return 3500000 + extra
+      elseif value == 3 then
+        return 23000 + extra
+      elseif value == 2 then
+        return 100 + extra
+      elseif value == 1 then
+        return 1 + extra
+      else
+        return extra
+      end
+    else
+      if value == -5 then
+        return -400000000 - extra
+      elseif value == -4 then
+        return -3500000 - extra
+      elseif value == -3 then
+        return -23000 - extra
+      elseif value == -2 then
+        return -100 - extra
+      elseif value == -1 then
+        return -1 - extra
+      else
+        return 0 - extra
+      end
+    end
 end
 
-local function heuristic(self,state)
-	local cost, coord = 0, self.coordinate
-	if Config.HEURISTIC.MANHATTAN then
-		local startmap, finalmap = state.map, self.final.map
-		local abs = math.abs
-		local s, f
-		for index=1, self.size*self.size, 1 do
-			s = coord[startmap[index]]
-			f = coord[finalmap[index]]
-			cost = cost + abs(s.x - f.x) + abs(s.y - f.y)
-		end
-	elseif Config.HEURISTIC.OUT_OF_PLACE then
-		for index, content in pairs(state.map) do
-			if self.final.map[index] ~= content then cost = cost + 1 end
+local function countZeros(node, position)
+  local count = 0
+  for index, content in ipairs(node) do
+      if content == 0 then
+        count = count + 1
+        if position and position == count then return index end
+      end
+  end
+  return count
+end
+
+local function getInput(coordinate)
+	local x, y
+	print('Digite a posição x:')
+	x = tonumber(io.read());
+	print('Digite a posição y:')
+	y = tonumber(io.read());
+	for index, content in ipairs(coordinate) do
+		if (content.x == x and content.y == y) then
+			return index
 		end
 	end
-	return cost
 end
 
-local function calculateState(self,state)
-	return state.level + heuristic(self,state)
-end
+local function getMapValue()
+  local map = {
+    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+    1,2,2,2,2,2,2,2,2,2,2,2,2,2,1,
+    1,2,3,3,3,3,3,3,3,3,3,3,3,2,1,
+    1,2,3,4,4,4,4,4,4,4,4,4,3,2,1,
+    1,2,3,4,5,5,5,5,5,5,5,4,3,2,1,
+    1,2,3,4,5,6,6,6,6,6,5,4,3,2,1,
+    1,2,3,4,5,6,7,7,7,6,5,4,3,2,1,
+    1,2,3,4,5,6,7,8,7,6,5,4,3,2,1,
+    1,2,3,4,5,6,7,7,7,6,5,4,3,2,1,
+    1,2,3,4,5,6,6,6,6,6,5,4,3,2,1,
+    1,2,3,4,5,5,5,5,5,5,5,4,3,2,1,
+    1,2,3,4,4,4,4,4,4,4,4,4,3,2,1,
+    1,2,3,3,3,3,3,3,3,3,3,3,3,2,1,
+    1,2,2,2,2,2,2,2,2,2,2,2,2,2,1,
+    1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+  }
 
-local function createNewState(state, id, match)
-	local unpack = table.unpack or unpack
-	return Util.createBehavior({
-			map={unpack(state.map)},
-			level=(state.level+1),
-			id= id or 0,
-			match= match or {}
-		},behavior)
+  return map
 end
-
 
 -----------------------
 --[ public functions ]
@@ -68,19 +99,20 @@ end
 
 function State:new()
 	local instance = {}
-	local initialId = table.concat(Config.INITIAL,',')
-	local finalId = table.concat(Config.FINAL,',')
+	local windrose = {E=true,W=false,S=true,N=false, NE=false, NW=false, SE= true, SW=true}
+	local step = 4
 	self.__index = State
 	setmetatable(instance, self)
-	instance.initial = createNewState({map=Config.INITIAL, level=-1}, initialId, {[initialId]=true})
-	instance.final = createNewState({map=Config.FINAL, level=-1}, finalId, {[finalId]=true})
 	instance.size = Config.SIZE
 	instance.coordinate = Util.getCartesianPlane(Config.SIZE)
-	instance.routes = Util.getRoutesOfCartesianPlane(Config.SIZE,instance.coordinate)
-	instance.emptySpace = Config.SIZE*Config.SIZE
+	instance.routes = Util.getRoutesOfCartesianPlane(Config.SIZE,instance.coordinate,step,windrose)
+	instance.initial = Util.getEmptyMap(Config.SIZE)
 	instance.view = View:new(Config.SIZE)
-	instance.visited = {}
-	instance.frontier = Buffer:new()
+	instance.depth = 0
+	instance.alfa = -100000000000
+	instance.beta = 100000000000
+	instance.maximizingPlayer = true
+  instance.mapValue = getMapValue(Config.SIZE)
 	return instance
 end
 
@@ -88,73 +120,120 @@ function State.start()
 	engine.start(State:new())
 end
 
-function State:setup()
-	self.timestart = os.time()
-	local seed = { state=self.initial, cost=calculateState(self,self.initial) }
-	self.frontier:insert(seed)
-  self.visited[seed.state.id] = {level=0}
-	self.target = { state=self.final, cost=calculateState(self,self.final) }
-	self.counter = 1
+function State:setup(minimax)
+	self.minimax = minimax
+	self:play()
 end
 
-function State:isFinal()
-		return self.frontier:isEmpty()
-end
-
-function State:next()
-		self.node = self.frontier:remove(1)
-		self:register()
-end
-
-function State:expandFrontier()
-  local state = self.node.state;
-	local oldPositionOfEmptySpace = Util.findContent(state.map,self.emptySpace)
-	local routes = self.routes[oldPositionOfEmptySpace]
-	for _, newPositionOfEmptySpace in ipairs(routes) do
-	  local newState = createNewState(state)
-		newState.map[newPositionOfEmptySpace] = state.map[oldPositionOfEmptySpace]
-		newState.map[oldPositionOfEmptySpace] = state.map[newPositionOfEmptySpace]
-		local id = table.concat(newState.map,',')
-		if not self.visited[id] then
-			newState.id = id
-			newState.match[newState.id]=true
-			self.visited[newState.id] = {parentId=state.id, level=newState.level}
-			self.frontier:insertByRule({ state=newState, cost=calculateState(self,newState) }, rule)
-		elseif self.visited[id].level > newState.level then
-			newState.id = id
-			newState.match[newState.id]=true
-			self.visited[newState.id] = {parentId=state.id, level=newState.level}
-			self.frontier:insertByRule({ state=newState, cost=calculateState(self,newState) }, rule)
-		end
+function State:play()
+  local count = 0
+	while not self:hasVictory(self.initial) do
+    if (count == 1 or count == 10 or count == 15 or count == 20) then
+      self.depth = self.depth + 1
+      print('---------------------------------------------------',self.depth)
+    end
+    count = count + 1
+		local position, best, value = 0
+    if (self.depth ~= 0) then
+      for index, child in ipairs(self:obterFilhos(self.initial,1)) do
+        value = self.minimax(child,self.depth,self.alfa,self.beta,self.maximizingPlayer)
+        print(value,index)
+        best = math.max(value, best or value)
+        if (best == value) then position = index end
+      end
+    else
+      position = 113
+    end
+		position = countZeros(self.initial,position,self)
+		print(position)
+		self.initial[position] = 1
+		self.view:draw(table.concat(self.initial,','))
+    if (self:hasVictory(self.initial)) then break end
+		position = getInput(self.coordinate)
+		print(position)
+		self.initial[position] = 2
+		self.view:draw(table.concat(self.initial,','))
 	end
-	self.counter = self.counter + 1
 end
 
-function State:register()
-	local node = self.node
-	self.view.log(node.state.id, node.cost, node.state.level, self.counter, #self.frontier.list)
+function State:getHeuritica(node,maxi)
+  local map = self.routes
+  local totalValue = 0
+  local cutPoint
+  for index, content in ipairs(node) do
+      local point = (content == 0 and 0) or (content == 1 and 1) or -1
+      cutPoint = point
+      local pointValue = 0
+      local dValue
+      for _, direction in ipairs(map[index]) do
+        dValue = point
+        for _, c in ipairs(direction) do
+          local piece = (node[c] == 0 and 0) or (node[c] == 1 and 1) or -1
+          if cutPoint == 0 then
+            cutPoint = piece
+            dValue = dValue + piece
+          elseif cutPoint == 0 and piece == 0 then
+            dValue = 0;
+            break
+          elseif ((cutPoint == 1 and piece == -1) or  (piece == 1 and cutPoint == -1)) then
+            dValue = 0;
+            break
+          else
+            dValue = dValue + piece
+          end
+        end
+        pointValue = pointValue + getPeso(dValue,self.mapValue[index],maxi)
+      end
+      totalValue = totalValue + pointValue
+  end
+  return totalValue
 end
 
-function State:isTarget()
-	return self.node.state == self.target.state
+function State:obterFilhos(node, piece)
+  local unpack = table.unpack or unpack
+  local childen = {}
+  for index, content in ipairs(node) do
+      if content == 0 then
+        local child = {unpack(node)}
+        child[index] = piece
+        childen[#childen+1]=child
+      end
+  end
+  return childen
 end
 
-function State:setToTarget()
-	self.view:show({
-		success=true,
-		msg="Sucesso em buscar a resposta! ",
-		node=self.node,
-		steps=self.visited,
-		frontier=self.counter+#self.frontier.list,
-		time='time: ' .. os.time()-self.timestart
-	})
+function State:utilidade(node)
+  local map = self.routes
+  local lvalue = 0
+  for index, content in ipairs(node) do
+    local point = (content == 0 and 0) or (content == 1 and 1) or -1
+    for _, direction in ipairs(map[index]) do
+      if (point == 0) then break end
+      local dValue = point
+      for _, c in ipairs(direction) do
+        local piece = ((node[c] == 0) and 0) or ((node[c] == 1) and 1) or -1
+        dValue = dValue + piece
+      end
+      if (dValue == 5) then
+          lvalue = 400000000
+      elseif (dValue == -5) then
+          lvalue = -400000000
+      end
+    end
+  end
+  return ((lvalue ~= 0) and lvalue) or false
 end
 
-function State:setToFinal()
-  self.view:show({
-		success=false,
-		msg="Falhou em buscar a resposta! Fronteira está vazia!"
-  })
+function State.isFinal(node)
+  for _, content in ipairs(node) do
+    if content == 0 then return false end
+  end
+  return true
+end
+
+function State:hasVictory(node,max)
+  local value = (self:utilidade(node,max))
+	return value
 end
 
 return State

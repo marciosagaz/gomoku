@@ -23,7 +23,7 @@ function Screen:draw(map)
   local layout = table.concat(output)
   local repValue = (layout:len() / size) - 1
   print(("_"):rep(repValue) .. '\n' .. string.gsub(layout,
-    tostring('00'),big and '__' or ' ') .. ("¨"):rep(repValue))
+    tostring(dsize),big and '  ' or ' ') .. ("¨"):rep(repValue))
 end
 
 function Screen:show(result)

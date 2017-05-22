@@ -221,7 +221,7 @@ end
 local node = {0,0,0,
               0,0,0,
               0,0,0}
-local depth = 3
+local depth = 5
 local alfa = -1000000000
 local beta = 1000000000
 local maximizingPlayer = true
