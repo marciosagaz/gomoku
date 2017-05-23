@@ -218,7 +218,7 @@ function State:play()
   local count = whoBegin(self)
 	while not self:hasVictory(self.initial) do
     if (count == 1) then
-      self.depth = self.depth + 1
+      self.depth = self.depth + 3
       print('---------------------------------------------------',self.depth)
     end
     count = count + 1
@@ -237,8 +237,9 @@ function State:getHeuritica(node,maxi)
   local totalValue = 0
   local cutPoint
   local pmin, pmax = findLimit(self)
+  local filter = {[true]=1,[false]=2}
   for index, content in ipairs(node) do
-    if (pmin <= index) and (index <= pmax) then
+    if ((pmin <= index) and (index <= pmax) and (content == filter[maxi])) then
       local point = (content == 0 and 0) or (content == 1 and 1) or -1
       cutPoint = point
       local pointValue = 0
@@ -299,9 +300,9 @@ function State:utilidade(node)
         dValue = dValue + piece
       end
       if (dValue == 5) then
-          lvalue = 400000000
+          lvalue = 500000000
       elseif (dValue == -5) then
-          lvalue = -400000000
+          lvalue = -500000000
       end
     end
   end
