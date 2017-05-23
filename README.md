@@ -1,2 +1,0 @@
-# gomoku
-gomoku with minimax
