@@ -32,8 +32,6 @@ local function findLimit(self)
   if not xm then
       xm, ym, xM, yM = 1, 1, self.size, self.size
   end
-  -- print('xm,yM',xm..','..yM,'xM,yM',xM..','..yM)
-  -- print('xm,ym',xm..','..ym,'xM,ym',xM..','..ym)
   xm = ((xm - 1 < 1) and 1) or (xm - 1)
   ym = ((ym - 1 < 1) and 1) or (ym - 1)
   xM = ((xM + 1 > self.size) and self.size) or (xM + 1)
@@ -47,14 +45,11 @@ local function findLimit(self)
       pointMax = index
     end
   end
-  -- print(pointMin, pointMax)
-  -- io.read()
   return pointMin, pointMax
 
 end
 
-local function getPeso(value, extra, max)
-    -- if max then
+local function getPeso(value, extra)
       if value == 5 then
         return 400000000 + extra
       elseif value == 4 then
@@ -65,10 +60,7 @@ local function getPeso(value, extra, max)
         return 100 + extra
       elseif value == 1 then
         return 1 + extra
-      -- else
-      --   return extra
       end
-    -- else
       if value == -5 then
         return -400000000 - extra
       elseif value == -4 then
@@ -79,16 +71,13 @@ local function getPeso(value, extra, max)
         return -100 - extra
       elseif value == -1 then
         return -1 - extra
-      -- else
-      --   return 0 - extra
       end
-    -- end
     return 0
 end
 
 local function countZeros(node, position, self)
   local count = 0
-  local pmin, pmax = findLimit(self)
+  local pmin, pmax = self.pmin, self.pmax --findLimit(self)
   for index, content in ipairs(node) do
       if (pmin <= index) and (index <= pmax) then
         if content == 0 then
@@ -114,6 +103,7 @@ local function getInput(coordinate)
 end
 
 local function pcPlay(self)
+  self.pmin, self.pmax = findLimit(self)
   local time = os.time()
   local position, best, value = 0
     if (self.depth ~= 0) then
@@ -218,8 +208,7 @@ function State:play()
   local count = whoBegin(self)
 	while not self:hasVictory(self.initial) do
     if (count == 1) then
-      self.depth = self.depth + 3
-      print('---------------------------------------------------',self.depth)
+      self.depth = self.depth + 2
     end
     count = count + 1
     pcPlay(self)
@@ -236,7 +225,7 @@ function State:getHeuritica(node,maxi)
   local map = self.routes
   local totalValue = 0
   local cutPoint
-  local pmin, pmax = findLimit(self)
+  local pmin, pmax = self.pmin, self.pmax --findLimit(self)
   local filter = {[true]=1,[false]=2}
   for index, content in ipairs(node) do
     if ((pmin <= index) and (index <= pmax) and (content == filter[maxi])) then
@@ -251,7 +240,7 @@ function State:getHeuritica(node,maxi)
           if cutPoint == 0 then
             cutPoint = piece
             dValue = dValue + piece
-          elseif ((cutPoint == 1 and piece == -1) or  (piece == 1 and cutPoint == -1)) then
+          elseif ((cutPoint == 1 and piece == -1) or (piece == 1 and cutPoint == -1)) then
             dValue = 0;
             break
           else
@@ -270,12 +259,11 @@ function State:getHeuritica(node,maxi)
 end
 
 function State:obterFilhos(node, piece)
-  local pmin, pmax = findLimit(self)
+  local pmin, pmax = self.pmin, self.pmax --findLimit(self)
   local unpack = table.unpack or unpack
   local childen = {}
   for index, content in ipairs(node) do
       if (pmin <= index) and (index <= pmax) then
-        -- print(index)
         if content == 0 then
           local child = {unpack(node)}
           child[index] = piece
@@ -283,7 +271,6 @@ function State:obterFilhos(node, piece)
         end
       end
   end
-  -- io.read()
   return childen
 end
 
